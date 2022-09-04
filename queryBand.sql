@@ -60,15 +60,17 @@ WHERE Cust_name LIKE N'_[h,t,a,à,ạ,ã,á,ă,â,ê]%'
 
 
  --11 Liệt kê những giao dịch gửi tiền diễn ra ngoài giờ hành chính
+
 SELECT t_id, ac_no, DATEPART(HOUR,t_time) as 'Time'
- FROM  transactions
- where DATEPART(HOUR,t_time) between 8 and 17
+FROM  transactions
+where (DATEPART(HOUR,t_time) between 17 and 23) or (DATEPART(HOUR,t_time) between 0 and 7) or (DATEPART(HOUR,t_time) between 11 and 13)
+				 
 
  --12 Liệt kê những giao dịch rút tiền diễn ra vào khoảng từ 0-3h sáng
 
-  SELECT t_id, ac_no, DATEPART(HOUR,t_time) as 'Time', DATEPART(minute,t_time) as 'minute'
+ SELECT t_id, ac_no, DATEPART(HOUR,t_time) as 'Time', DATEPART(minute,t_time) as 'minute'
  FROM  transactions
- where DATEPART(HOUR,t_time) between 8 and 3
+ where DATEPART(HOUR,t_time) between 0 and 3
 
  --13 Tìm những khách hàng có địa chỉ ở Ngũ Hành Sơn – Đà nẵng
 
@@ -101,25 +103,27 @@ where BR_ad IS NULL
 select  Cust_name, PARSENAME(replace(replace(replace(Cust_ad, '.', ''), '-', '.'), ',', '.'), 1) as 'Tên Tỉnh/ Thành Phố'
 from customer
 
-select  *
-from customer
+
 --19 Hiển thị danh sách khách hàng có họ tên không bắt đầu bằng chữ N, T
 SELECT Cust_id, Cust_name
 FROM customer
-WHERE Cust_name not LIKE N'[N,T]%'
+WHERE Cust_name  LIKE N'[^N,T]%'
 
 -- 20. Hiển thị danh sách khách hàng có kí tự thứ 3 từ cuối lên là chữ a, u, i ()
 
-select  Cust_id, Cust_name
+select  Cust_id, Cust_name, RIGHT(Cust_name, 3)
 from customer
-where Cust_name like N'%[a, â, ă, u, ư, i]___'
+where RIGHT(Cust_name, 3) like N'[a, â, ă, u, ư, i]%'
 
 --21. Hiển thị khách hàng có tên đệm là Thị hoặc Văn
-
+select  Cust_id, Cust_name
+from customer
+where (parsename(replace(Cust_name, ' ', '.'), 2) = N'Thị') or (parsename(replace(Cust_name, ' ', '.'), 2) = N'Văn')
 
 
 --22. Hiển thị khách hàng có địa chỉ sống ở vùng nông thôn. Với quy ước: nông thôn là vùng mà địa chỉ chứa: thôn, xã, xóm
-
+select cust_id, cust_name, cust_ad from customer
+where (cust_ad like N'%thôn%') or (cust_ad like N'%xã%') or (cust_ad like N'%xóm%')
 
 
 --23 Hiển thị danh sách khách hàng có kí tự thứ hai của TÊN là chữ u hoặc ũ hoặc a. Chú ý: TÊN là từ cuối cùng của cột cust_name
