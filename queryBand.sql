@@ -87,17 +87,16 @@ where BR_ad IS NULL
  --15 Liệt kê những giao dịch rút tiền bất thường (nhỏ hơn 50.000) XXX
   SELECT *
  FROM  transactions
- where t_amount < 50000
+ where t_amount < 50000 and t_type = 1
 
  -- 16. Liệt kê các giao dịch gửi tiền diễn ra trong năm 2017. XXX
  SELECT *
  FROM  transactions
- where YEAR(t_date) = 2017
+ where YEAR(t_date) = 2017 and t_type = 0
  -- 17 Liệt kê những giao dịch bất thường (tiền trong tài khoản âm)
  SELECT *
  FROM  account
- where ac_balance < 0
-
+ where ac_balance < 0 
 -- 18. Hiển thị tên khách hàng và tên tỉnh/thành phố mà họ sống
 
 select  Cust_name, PARSENAME(replace(replace(replace(Cust_ad, '.', ''), '-', '.'), ',', '.'), 1) as 'Tên Tỉnh/ Thành Phố'
