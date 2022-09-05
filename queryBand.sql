@@ -61,16 +61,15 @@ WHERE Cust_name LIKE N'_[h,t,a,à,ạ,ã,á,ă,â,ê]%'
 
  --11 Liệt kê những giao dịch gửi tiền diễn ra ngoài giờ hành chính
 
-SELECT t_id, ac_no, DATEPART(HOUR,t_time) as 'Time'
+SELECT t_id, ac_no, t_time
 FROM  transactions
-where (DATEPART(HOUR,t_time) between 17 and 23) or (DATEPART(HOUR,t_time) between 0 and 7) or (DATEPART(HOUR,t_time) between 11 and 13)
-				 
+where t_type = 1 and (t_time not between '08:00:00' and '12:00:00') and (t_time not between '13:30:00' and '17:00:00') 
 
  --12 Liệt kê những giao dịch rút tiền diễn ra vào khoảng từ 0-3h sáng
 
- SELECT t_id, ac_no, DATEPART(HOUR,t_time) as 'Time', DATEPART(minute,t_time) as 'minute'
+ SELECT t_id, ac_no, t_time
  FROM  transactions
- where DATEPART(HOUR,t_time) between 0 and 3
+ where t_type = 0 and t_time between '00:00:00' and '03:00:00'
 
  --13 Tìm những khách hàng có địa chỉ ở Ngũ Hành Sơn – Đà nẵng
 
@@ -78,30 +77,30 @@ select *
 from customer
 where Cust_ad like N'%Ngũ Hành Sơn%' and  Cust_ad like N'%Đà nẵng%'
 
---14 Liệt kê những chi nhánh chưa có địa chỉ 1 XXX
+--14 Liệt kê những chi nhánh chưa có địa chỉ 1 
 
 select * from branch
 where BR_ad IS NULL
 
 
- --15 Liệt kê những giao dịch rút tiền bất thường (nhỏ hơn 50.000) XXX
+ --15 Liệt kê những giao dịch rút tiền bất thường (nhỏ hơn 50.000)
   SELECT *
  FROM  transactions
- where t_amount < 50000 and t_type = 1
+ where t_amount < 50000 and t_type = 0
 
- -- 16. Liệt kê các giao dịch gửi tiền diễn ra trong năm 2017. XXX
+ -- 16. Liệt kê các giao dịch gửi tiền diễn ra trong năm 2017. 
  SELECT *
  FROM  transactions
- where YEAR(t_date) = 2017 and t_type = 0
+ where YEAR(t_date) = 2017 and t_type = 1
  -- 17 Liệt kê những giao dịch bất thường (tiền trong tài khoản âm)
  SELECT *
- FROM  account
+ FROM  account 
  where ac_balance < 0 
+ select * from transactions
 -- 18. Hiển thị tên khách hàng và tên tỉnh/thành phố mà họ sống
 
 select  Cust_name, PARSENAME(replace(replace(replace(Cust_ad, '.', ''), '-', '.'), ',', '.'), 1) as 'Tên Tỉnh/ Thành Phố'
 from customer
-
 
 --19 Hiển thị danh sách khách hàng có họ tên không bắt đầu bằng chữ N, T
 SELECT Cust_id, Cust_name
@@ -126,6 +125,45 @@ where (cust_ad like N'%thôn%') or (cust_ad like N'%xã%') or (cust_ad like N'%x
 
 
 --23 Hiển thị danh sách khách hàng có kí tự thứ hai của TÊN là chữ u hoặc ũ hoặc a. Chú ý: TÊN là từ cuối cùng của cột cust_name
-select  Cust_id, Cust_name
+select  Cust_id, Cust_name, parsename(replace(Cust_name, ' ', '.'), 1)
 from customer
 where parsename(replace(Cust_name, ' ', '.'), 1) like N'_[u, ũ, a]%'
+
+-- 25. Thống kê số lượng giao dịch, tổng số tiền giao dịch theo loại
+select t_type,  count(t_id) as 'So luong giao dich', sum(t_amount) as 'tong so tien'
+from transactions
+group by t_type
+
+
+--26 Có bao nhiêu khách hàng có địa chỉ ở Huế
+select  count(cust_id) as 'so luong'
+from customer
+where cust_ad like N'%Huế%'
+
+--36 Số tiền trung bình của mỗi lần thực hiện giao dịch rút tiền trong năm 2017 là bao nhiêu
+select  cast(avg(t_amount) as int) as 'Trung Binh'
+from transactions
+where year(t_date) = 2017 and t_type = 0
+
+-- 1 Có bao nhiêu khách hàng có địa chỉ ở Quảng Nam thuộc chi nhánh ngân hàng vietcombank Đà Nẵng
+select count(Cust_id) N'Số lượng khách hàng'
+from customer join branch
+on customer.br_id = branch.Br_id
+where customer.cust_ad like N'%Quảng Nam%' and branch.BR_name like N'% Đà Nẵng%'
+
+--2 Hiển thị Danh sách khách hàng thuộc chi nhánh Vũng Tàu và số dư trong tài khoản của họ
+select customer.cust_id, customer.cust_name, sum(account.ac_balance) N'Số Tiền trong tài khoản'
+from customer join branch on customer.br_id = branch.Br_id 
+             join account on customer.cust_id = account.cust_id
+where  branch.BR_name like N'%Vũng tàu%'
+group by customer.cust_id, customer.cust_name
+
+--3 Trong quý 1 năm 2012, Có bao nhiêu khách hàng thực hiện giao dịch rút tiền tại ngân hàng Vietcombank
+
+
+select count(cus.Cust_id) as 'Số lượng khách hàng' from customer as cus join branch as br on cus.Br_id = br.Br_id 
+							join account as ac on cus.cust_id = ac.cust_id
+							join transactions as trans on ac.Ac_no = trans.ac_no
+where br.Br_name like N'%Vietcombank%' and trans.t_type = 0 and year(trans.t_date) = 2017 and month(trans.t_date) between 1 and 3 
+
+
