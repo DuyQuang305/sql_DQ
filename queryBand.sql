@@ -152,18 +152,69 @@ on customer.br_id = branch.Br_id
 where customer.cust_ad like N'%Quảng Nam%' and branch.BR_name like N'% Đà Nẵng%'
 
 --2 Hiển thị Danh sách khách hàng thuộc chi nhánh Vũng Tàu và số dư trong tài khoản của họ
-select customer.cust_id, customer.cust_name, sum(account.ac_balance) N'Số Tiền trong tài khoản'
+select customer.cust_id, customer.cust_name, branch.BR_name, sum(account.ac_balance) N'Số Tiền trong tài khoản'
 from customer join branch on customer.br_id = branch.Br_id 
              join account on customer.cust_id = account.cust_id
 where  branch.BR_name like N'%Vũng tàu%'
-group by customer.cust_id, customer.cust_name
+group by customer.cust_id, customer.cust_name, branch.BR_name
 
 --3 Trong quý 1 năm 2012, Có bao nhiêu khách hàng thực hiện giao dịch rút tiền tại ngân hàng Vietcombank
 
 
-select count(cus.Cust_id) as 'Số lượng khách hàng' from customer as cus join branch as br on cus.Br_id = br.Br_id 
+select count(cus.Cust_id) as 'Số lượng khách hàng' 
+from customer as cus join branch as br on cus.Br_id = br.Br_id 
 							join account as ac on cus.cust_id = ac.cust_id
 							join transactions as trans on ac.Ac_no = trans.ac_no
 where br.Br_name like N'%Vietcombank%' and trans.t_type = 0 and year(trans.t_date) = 2017 and month(trans.t_date) between 1 and 3 
 
 
+
+
+
+--1> Mùa thu năm 2012, khách hàng Trần Văn Thiện Thanh thực hiện bao nhiêu giao dịch?
+
+
+select count(trans.t_id) as 'Số lượng giao dịch' 
+from customer as cus join account as ac on cus.cust_id = ac.cust_id
+					join transactions as trans on ac.Ac_no = trans.ac_no
+where cus.Cust_name = 'Trần Văn Thiện Thanh' and  year(trans.t_date) = 2017 and month(trans.t_date) between 7 and 9 
+
+-- 2> tổng tiền đã gửi vào Vietcombank chi nhánh Đà Nẵng năm 2013 là bao nhiêu?
+
+select sum(trans.t_amount) as 'Tổng tiền' 
+from customer as cus join branch as br on cus.Br_id = br.Br_id 
+					 join account as ac on cus.cust_id = ac.cust_id
+					 join transactions as trans on ac.Ac_no = trans.ac_no
+where year(trans.t_date) = 2013 and br.Br_name = N'Vietcombank Đà Nẵng' and trans.t_type = 1
+
+
+--3> Số tiền trung bình đã gửi vào chi nhánh Huế từ trước đến nay là bao nhiêu
+
+select AVG(trans.t_amount) as 'Số tiền trung bình' 
+from customer as cus join branch as br on cus.Br_id = br.Br_id 
+							join account as ac on cus.cust_id = ac.cust_id
+							join transactions as trans on ac.Ac_no = trans.ac_no
+where br.Br_name like N'%Huế%' and trans.t_type = 1
+
+--4> Có bao nhiêu khách cùng chi nhánh với Trần Văn Thiện Thanh
+select count(cust_id) - 1 SLKH
+from customer
+where Br_id = (
+				select Br_id
+				from customer where Cust_name like N'Trần Văn Thiện Thanh'
+			)
+
+--6> Chi nhánh Sài Gòn có những khách hàng nào không thực hiện bất kì giao dịch nào trong vòng 3 năm trở lại đây
+-- Nếu có thể, hãy hiển thị tên và số điện thoại của các khách đó để phòng marketing xử lý
+
+
+
+--8> Tìm số tiền giao dịch nhiều nhất trong năm 2016 của chi nhanh Huế.
+-- Nếu có thể, hãy đưa ra tên của khách hàng thực hiện giao dịch đó.
+
+--17> Ông phạm Duy Khách thuộc chi nhánh nào? Từ 01/2017 đến nay ông Khánh đã thực hiện bao nhiêu giao dịch
+--gửi tiền vào ngân hàng với tổng số tiền là bao nhiêu.
+
+--33> Thời gian vừa qua, hệ thống CSDL của ngân hàng bị hacker tấn công (giả sử),
+--tổng tiền trong tài khoản bị thay đổi bất thường. Hãy liệt kê những tài khoản bất thường đó.
+--Gợi ý: tài khoản bất thường là tài khoản có tổng tiền gửi - tổng tiền rút <> số tiền trong tài khoản 
