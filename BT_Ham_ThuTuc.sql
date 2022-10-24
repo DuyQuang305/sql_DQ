@@ -378,7 +378,7 @@ begin
 end
 
 
-print dbo.fCheckTrans('0000000254')
+print dbo.fCheckTrans('000054')
 
 -- 10.Trả về mã giao dịch mới. Mã giao dịch tiếp theo được tính như sau: MAX(mã giao dịch đang có) + 1. 
 --Hãy đảm bảo số lượng kí tự luôn đúng với quy định về mã giao dịch
@@ -406,6 +406,61 @@ print dbo.fGetTransId()
 --f.Thêm mới bản ghi vào bảng TRANSACTIONS
 --g.Cập nhật bảng ACCOUNT bằng cách cộng hoặc trừ số tiền vừa thực hiện giao dịch tùy theo loại giao dịch
 
+CREATE PROC updateTrans (@t_date date, @t_time TIME, @ac_no varchar(10), @t_type int, @t_amount numeric(15,0))
+AS
+BEGIN
+	DECLARE @newID VARCHAR(10), @max INT, @temp VARCHAR(10)
+
+	IF @t_date > getdate() OR @t_time BETWEEN '00:00' AND '03:00'
+	BEGIN
+		PRINT N'Thời gian không hợp lệ'
+		return
+	END
+
+    ELSE IF NOT EXISTS (SELECT ac_no FROM dbo.account WHERE Ac_no = @ac_no)
+	BEGIN
+		PRINT N'Tài khoản không tồn tại'
+		return
+    END
+
+    ELSE IF @t_type NOT IN (0,1)
+	BEGIN
+		PRINT N'Loại giao dịch không hợp lệ'
+		RETURN
+	END
+
+    ELSE IF @t_amount <= 0
+	BEGIN
+		PRINT N'Số tiền không hợp lệ'
+		return
+    END
+    
+	SET @max = (SELECT MAX(CAST(t_id AS INT)) FROM dbo.transactions)
+	SET @temp = CAST(@max + 1 AS VARCHAR)
+	SET @newID = REPLICATE('0', 10 - LEN(@temp)) + @temp
+
+	INSERT INTO transactions VALUES (@newID, @t_type, @t_amount, @t_date, @t_time, @ac_no) --F
+
+	IF @@ROWCOUNT >0 --G
+	BEGIN
+		IF @t_type = 0
+		BEGIN
+			UPDATE dbo.account
+			SET ac_balance = ac_balance - @t_amount
+			WHERE Ac_no = @ac_no
+		END
+		ELSE IF @t_type = 1
+		BEGIN
+		    UPDATE dbo.account
+			SET ac_balance = ac_balance + @t_amount
+			WHERE Ac_no = @ac_no
+		END
+	END
+END
+
+EXEC updateTrans '2022/10/17', '12:00', '1000000001', 1, '1'
+
+
 
 --12.Thêm mới một tài khoản nếu biết: mã khách hàng, loại tài khoản, số tiền trong tài khoản. Bao gồm những công việc sau:
 --a.Kiểm tra mã khách hàng đã tồn tại trong bảng CUSTOMER chưa? Nếu chưa, ngừng xử lý
@@ -414,4 +469,82 @@ print dbo.fGetTransId()
 --d.Tính số tài khoản mới. Số tài khoản mới bằng MAX(các số tài khoản cũ) + 1
 --e.Thêm mới bản ghi vào bảng ACCOUNT với dữ liệu đã có.
 
+CREATE proc UPDATE_Account (@cust_id char(6), @t_type int,@ac_balance numeric(15,0))
+as
+begin
+	if not exists (select cust_id from customer where @cust_id=cust_id)
+	begin
+		print N'Mã khách hàng không tồn tại'
+		RETURN
+	end
+	else if @t_type!=0 and @t_type!=1
+	begin
+		print 'Loại tài khoản không hợp lệ'
+		RETURN
+	end
+	else if @ac_balance < 0
+	begin
+		print 'Số tiền không hợp lệ'
+		RETURN
+	end
+	else if @ac_balance is null
+	begin 
+		set @ac_balance=50000
+	end	
+	ELSE
+	BEGIN
+		SET @ac_balance=@ac_balance
+	END
+	declare @STK1 char(10)
+	select @STK1=MAX(AC_NO)+1
+	from ACCOUNT
+	INSERT INTO ACCOUNT VALUES (@STK1,@ac_balance,@t_type,@cust_id)
+end
+exec UPDATE_Account '000001',1,NULL
+select * from account
+-- 15 Tính mã tài khoản mới. (định nghĩa tương tự như câu trên)
+
+create function fGetAcNo()
+returns varchar(10)
+as
+begin
+	declare @newAcNo varchar(10)
+	select @newAcNo = max(Ac_no) + 1 from account
+
+	return @newAcNo
+end
+
+print dbo.fGetAcNo()
+
+
+
+
 -- 22.Sinh mã chi nhánh tự động. Sơ đồ thuật toán của module được mô tả như sau:
+create function fGetBrId(@brId varchar(10))
+returns varchar(10)
+as
+begin
+	declare @cNewID varchar(5), @iMax varchar(5), @cMax3 varchar(5)
+
+	if not exists (select * from branch where left(br_id, 2) =  @brId)
+	begin
+		set @cNewID = @brId + '001'
+	end
+
+	else 
+	begin
+		set @imax = (select max(right(br_id, 3)) + 1 from branch where left(br_id,2)= @brId)
+		set @cMax3 = replicate('0', 3 - len(@imax)) +  @imax 
+		set @cNewID = @brId + @cMax3
+	end
+
+	return @cNewID
+end	
+
+print dbo.fGetBrId('VT')
+
+drop function fGetBrId
+
+
+select * from transactions
+
